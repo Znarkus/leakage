@@ -1,6 +1,7 @@
 var Do = require('do'),
 	Mysql = require('Mysql'),
 	Express = require('express'),
+	Util = require('util'),
 	mysqlConnection,
 	expressApp,
 	webServer;
@@ -58,7 +59,7 @@ function logQuery(data) {
 }
 
 function logRequest(data) {
-	var todo = new Do(3),
+	var todo = new Do(2),
 		sqlData = {};
 	
 	// When all meta is inserted, run this
@@ -67,7 +68,7 @@ function logRequest(data) {
 		sqlData.render_time = data.renderTime;
 		sqlData.log_date = new Date(data.logDate * 1000);
 		
-		queryInsert('INSERT INTO `queries` SET ?', sqlData, function () {
+		queryInsert('INSERT INTO `requests` SET ?', sqlData, function () {
 			// Done
 		});
 	});
@@ -111,6 +112,10 @@ appExpress.post('/', function (req, res) {
 		switch (req.body.type) {
 			case 'query':
 				logQuery(req.body.data);
+			break;
+			
+			case 'request':
+				logRequest(req.body.data);
 			break;
 			
 			default:

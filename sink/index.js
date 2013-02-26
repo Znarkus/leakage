@@ -15,6 +15,7 @@ function processQueue() {
 	
 	processingQueue = true;
 	data = queue.shift();
+	
 	console.log('Processing queue.');
 	
 	req = Http.request({
@@ -34,18 +35,27 @@ function processQueue() {
 		processingQueue = false;
 		
 		if (res.statusCode != 200) {
+			console.error('Request failed with code ' + res.statusCode);
 			queue.push(data);
-		}
+			setTimeout(function () {
+				processQueue();
+			}, 3000);
 		
-		if (queue.length > 0) {
+		} else if (queue.length > 0) {
 			processQueue();
 		}
+		
+		
 	});
 
 	req.on('error', function(e) {
 		console.error('Problem with request: ' + e.message);
-		queue.push(data);
 		processingQueue = false;
+		queue.push(data);
+		
+		setTimeout(function () {
+			processQueue();
+		}, 3000);
 	});
 
 	// write data to request body
@@ -54,17 +64,12 @@ function processQueue() {
 }
 	
 netServer = Net.createServer(function (socket) {
-	/*
-	Protocol:
-	[Type]\n
-	[JSON data length]\n
-	[Raw JSON data]
-	*/
 	var buffer = [],
 		length = 0;
 
 	socket.setEncoding('utf8');
 	socket.on('data', function (data) {
+		console.log(data);
 		buffer.push(data);
 		length += data.length;
 	});
