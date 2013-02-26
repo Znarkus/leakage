@@ -1,0 +1,13 @@
+{
+  "author": "Markus Hedlund <markus@snowfire.net>",
+  "name": "leakage",
+  "description": "-",
+  "version": "0.0.1",
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": {
+    "mysql": "2.0.x",
+    "do": "0.1.x"
+  }
+}
