@@ -69,7 +69,6 @@ netServer = Net.createServer(function (socket) {
 
 	socket.setEncoding('utf8');
 	socket.on('data', function (data) {
-		console.log(data);
 		buffer.push(data);
 		length += data.length;
 	});
