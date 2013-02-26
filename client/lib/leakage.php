@@ -25,6 +25,7 @@ class Leakage
 	
 	public function log($type, $data)
 	{
-		socket_write($this->_socket, "{$type}\n" . json_encode($data));
+		$data['logDate'] = time();
+		socket_write($this->_socket, json_encode(array('type' => $type, 'data' => $data)));
 	}
 }

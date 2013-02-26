@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "mysql": "2.0.x",
-    "do": "0.1.x"
+    "do": "0.1.x",
+    "express": "3.1.x"
   }
 }

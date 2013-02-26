@@ -1,17 +1,9 @@
 var Do = require('do'),
 	Mysql = require('Mysql'),
-	Net = require('net'), 
-	Util = require('util'),
-	netServer,
-	mysqlConnection;
-
-mysqlConnection = Mysql.createConnection({
-	host     : 'localhost',
-	user     : 'root',
-	password : '',
-	database : 'leakage'
-});
-
+	Express = require('express'),
+	mysqlConnection,
+	expressApp,
+	webServer;
 
 
 function queryInsert(sql, data, callback) {
@@ -37,7 +29,7 @@ function logQuery(data) {
 	todo.success(function () {
 		sqlData.account_id = data.accountId;
 		sqlData.query_time = data.queryTime;
-		sqlData.log_date = new Date();
+		sqlData.log_date = new Date(data.logDate * 1000);
 		
 		queryInsert('INSERT INTO `queries` SET ?', sqlData, function () {
 			// Done
@@ -65,46 +57,78 @@ function logQuery(data) {
 	});
 }
 
-
-
-netServer = Net.createServer(function (socket) {
-	var buffer = [],
-		length = 0;
-
-	socket.setEncoding('utf8');
-	socket.on('data', function (data) {
-		buffer.push(data);
-		length += data.length;
+function logRequest(data) {
+	var todo = new Do(3),
+		sqlData = {};
+	
+	// When all meta is inserted, run this
+	todo.success(function () {
+		sqlData.account_id = data.accountId;
+		sqlData.render_time = data.renderTime;
+		sqlData.log_date = new Date(data.logDate * 1000);
+		
+		queryInsert('INSERT INTO `queries` SET ?', sqlData, function () {
+			// Done
+		});
 	});
 	
-	socket.on('close', function () {
-		var data = buffer.join('').match('^([a-z]+)\n(.+)$');
-		
-		switch (data[1]) {
-			case 'query':
-				logQuery(JSON.parse(data[2]));
-			break;
-			
-			default:
-				throw Util.format('Invalid log type %s.', data[1]);
-		}
-		
-		console.info('Connection closed.');
-		//console.log(buffer, length);
-		
+	todo.error(function (err) {
+		throw err;
 	});
 	
-	socket.on('connect', function () {
-		console.info('Connection from ' + socket.remoteAddress + '.');
+	
+	addMeta('meta_domains', { domain_name: data.domainName }, function (err, id) {
+		sqlData.domain_id = id;
+		todo.done();
 	});
+	
+	addMeta('meta_http_queries', { http_query: encodeURI(data.httpQuery) }, function (err, id) {
+		sqlData.http_query_id = id;
+		todo.done();
+	});
+}
+
+
+
+mysqlConnection = Mysql.createConnection({
+	host     : 'localhost',
+	user     : 'root',
+	password : '',
+	database : 'leakage'
 });
 
 mysqlConnection.connect();
+appExpress = Express();
 //insert();
 //connection.end();
 
-netServer.on('listening', function () {
-	console.info(Util.format('TCP server listening on port %d at %s.', 4000, '127.0.0.1'));
+appExpress.use(Express.json());
+appExpress.post('/', function (req, res) {
+	console.log('Connection from ' + req.ip + '.');
+	res.set('connection', 'close');
+	
+	if (req.is('application/json')) {
+		switch (req.body.type) {
+			case 'query':
+				logQuery(req.body.data);
+			break;
+			
+			default:
+				throw Util.format('Invalid log type %s.', req.body.type);
+		}
+		
+		res.send({ success: true });
+		
+	} else {
+		res.send(404, { success: false });
+	}
+	
+	
+	/*res.send('hello world');
+	console.log(req, res);*/
 });
 
-netServer.listen(4000, '127.0.0.1');
+var webServer = appExpress.listen(4000, function () {
+	var address = webServer.address();
+	console.log('Drain listening for HTTP on %s:%s.', address.address, address.port);
+});
