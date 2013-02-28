@@ -1,10 +1,24 @@
 var Net = require('net'),
 	Util = require('util'),
 	Http = require('http'),
+	Commander = require('commander'),
+	logger = require('just-log'),
+	//Nconf = require('nconf'),
 	queue = [],
 	processingQueue = false,
 	netClient,
-	netServer;
+	netServer,
+	delayTimer,
+	config;
+
+function delayedProcessQueue() {
+	if (!delayTimer) {
+		delayTimer = setTimeout(function () {
+			delayTimer = null;
+			processQueue();
+		}, 3000);
+	}
+}
 
 function processQueue() {
 	if (processingQueue) {
@@ -16,32 +30,30 @@ function processQueue() {
 	processingQueue = true;
 	data = queue.shift();
 	
-	console.log('Processing queue.');
+	logger.verbose('Processing queue. Queue length: %s', queue.length);
 	
 	req = Http.request({
-		host: '127.0.0.1',
-		port: 4000,
+		host: config.drain.hostname,
+		port: config.drain.port,
 		path: '/',
 		method: 'POST',
 		headers: { 'Content-type': 'application/json' }
 	}, function (res) {
-		/*console.log('STATUS: ' + res.statusCode);
-		console.log('HEADERS: ' + JSON.stringify(res.headers));*/
+		/*logger.verbose('STATUS: ' + res.statusCode);
+		logger.verbose('HEADERS: ' + JSON.stringify(res.headers));*/
 		//res.setEncoding('utf8');
 		/*res.on('data', function (chunk) {
-			console.log('BODY: ' + chunk);
+			logger.verbose('BODY: ' + chunk);
 		});*/
 		
 		processingQueue = false;
 		
 		if (res.statusCode != 200) {
-			console.error('Request failed with code ' + res.statusCode);
+			logger.error('Request failed with code ' + res.statusCode);
 			queue.push(data);
-			setTimeout(function () {
-				processQueue();
-			}, 3000);
-		
+			delayedProcessQueue();
 		} else if (queue.length > 0) {
+			logger.verbose('Successfully sent data to drain.');
 			processQueue();
 		}
 		
@@ -49,19 +61,44 @@ function processQueue() {
 	});
 
 	req.on('error', function(e) {
-		console.error('Problem with request: ' + e.message);
+		logger.error('Problem with request: ' + e.message);
 		processingQueue = false;
 		queue.push(data);
-		
-		setTimeout(function () {
-			processQueue();
-		}, 3000);
+		delayedProcessQueue();
 	});
 
 	// write data to request body
 	req.write(data);
 	req.end();
 }
+
+Commander
+	.option('-c, --config [path]', 'Config file (json)')
+	.option('-d, --debug', 'Enable debug mode')
+	.option('-v, --verbose', 'Enable verbose mode')
+	//.option('-a, --address [address]', 'Bind to address:port', '127.0.0.1:4000')
+	.parse(process.argv);
+
+if (!Commander.config) {
+	Commander.help();
+}
+
+logger.mode.debug = Commander.debug;
+logger.mode.verbose = Commander.verbose;
+
+config = require(process.cwd() + '/' + Commander.config);
+
+/*(function () {
+	var address;
+	
+	address = Commander.config ?  Commander.address;
+	address = address.match(/^(.*):(\d+)$/);
+	
+	config = {
+		ip: address[1],
+		port: address[2]
+	};
+}());*/
 	
 netServer = Net.createServer(function (socket) {
 	var buffer = [],
@@ -74,35 +111,35 @@ netServer = Net.createServer(function (socket) {
 	});
 	
 	socket.on('close', function () {
-		console.log('Connection closed.');
-		//console.log(buffer);
+		//logger.verbose(buffer);
 		queue.push(buffer.join(''));
+		logger.verbose('Connection closed. Data added to queue. Queue length: %s', queue.length);
 		processQueue();
 		//netClient.write(buffer.join(''));
 	});
 	
 	socket.on('connect', function () {
-		console.log('Connection from ' + socket.remoteAddress + '.');
+		logger.verbose('Connection from ' + socket.remoteAddress + '.');
 	});
 });
 
 netServer.on('listening', function () {
 	var address = netServer.address();
-	console.log('Sink listening on %s:%s.', address.address, address.port);
+	logger.info('Sink listening on %s:%s.', address.address, address.port);
 });
 
-netServer.listen(4001, '127.0.0.1');
+netServer.listen(config.server.port, config.server.ip);
 
 /*netClient = Net.connect({ port: 4000 }, function () {
-	console.log('Connected to drain at %s:%s.', netClient.remoteAddress, netClient.remotePort);
+	logger.verbose('Connected to drain at %s:%s.', netClient.remoteAddress, netClient.remotePort);
 });
 
 netClient.on('end', function () {
-	console.error('Drain disconnected.');
+	logger.error('Drain disconnected.');
 	process.exit(1);
 });
 
 netClient.on('error', function (err) {
-	console.error('Failed to connect to drain.');
+	logger.error('Failed to connect to drain.');
 	process.exit(1);
 });*/
