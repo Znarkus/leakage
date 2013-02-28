@@ -125,7 +125,10 @@ mysqlConnection = Mysql.createConnection({
 	database : config.mysql.dbname
 });
 
-mysqlConnection.connect();
+mysqlConnection.connect(function (err) {
+	logger.info('Connected to MySQL server on %s:%d.', mysqlConnection.config.host, mysqlConnection.config.port);
+});
+
 appExpress = Express();
 //insert();
 //connection.end();
