@@ -11,25 +11,20 @@ var Do = require('do'),
 	config;
 
 
-function queryInsert(sql, data, callback) {
+/*function queryInsert(sql, data, callback) {
 	Logger.debug('Sql "%s" with data %j', sql, data);
 	
 	mysqlConnection.query(sql, data, function(err, result) {
-		if (err) {
-			//throw err;
-			Logger.error(err);
-		}
-		
 		// Callback( [error], result )
-		callback(null, result.insertId);
+		callback(err, result.insertId);
 	});
-}
+}*/
 
 function addMeta(table, data, callback) {
 	/*var id;
 	
 	if (metaCache[table] && metaCache[table])*/
-	queryInsert('INSERT INTO ' + Mysql.escapeId(table) + ' SET ? ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)', data, callback);
+	mysqlConnection.query('INSERT INTO ' + Mysql.escapeId(table) + ' SET ? ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)', data, callback);
 }
 
 function logQuery(data) {
@@ -44,29 +39,43 @@ function logQuery(data) {
 		sqlData.query_time = data.queryTime;
 		sqlData.log_date = new Date(data.logDate * 1000);
 		
-		queryInsert('INSERT INTO `queries` SET ?', sqlData, function () {
-			// Done
+		mysqlConnection.query('INSERT INTO `queries` SET ?', sqlData, function (err, result) {
+			if (err) {
+				Logger.error(err.message);
+			}
 		});
 	});
 	
 	todo.error(function (err) {
-		throw err;
+		//throw err;
+		Logger.error(err);
 	});
 	
-	
-	addMeta('meta_domains', { domain_name: data.domainName }, function (err, id) {
-		sqlData.domain_id = id;
-		todo.done();
+	addMeta('meta_domains', { domain_name: data.domainName }, function (err, result) {
+		if (err) {
+			throw err;
+		} else {
+			sqlData.domain_id = result.insertId;
+			todo.done();
+		}
 	});
 	
-	addMeta('meta_http_queries', { http_query: encodeURI(data.httpQuery) }, function (err, id) {
-		sqlData.http_query_id = id;
-		todo.done();
+	addMeta('meta_http_queries', { http_query: encodeURI(data.httpQuery) }, function (err, result) {
+		if (err) {
+			throw err;
+		} else {
+			sqlData.http_query_id = result.insertId;
+			todo.done();
+		}
 	});
 	
-	addMeta('meta_sql', { sql: data.sql }, function (err, id) {
-		sqlData.sql_id = id;
-		todo.done();
+	addMeta('meta_sql', { sql: data.sql }, function (err, result) {
+		if (err) {
+			throw err;
+		} else {
+			sqlData.sql_id = result.insertId;
+			todo.done();
+		}
 	});
 }
 
@@ -82,24 +91,35 @@ function logRequest(data) {
 		sqlData.render_time = data.renderTime;
 		sqlData.log_date = new Date(data.logDate * 1000);
 		
-		queryInsert('INSERT INTO `requests` SET ?', sqlData, function () {
-			// Done
+		mysqlConnection.query('INSERT INTO `requests` SET ?', sqlData, function (err, result) {
+			if (err) {
+				Logger.error(err.message);
+			}
 		});
 	});
 	
 	todo.error(function (err) {
-		throw err;
+		//throw err;
+		Logger.error(err);
 	});
 	
 	
-	addMeta('meta_domains', { domain_name: data.domainName }, function (err, id) {
-		sqlData.domain_id = id;
-		todo.done();
+	addMeta('meta_domains', { domain_name: data.domainName }, function (err, result) {
+		if (err) {
+			throw err;
+		} else {
+			sqlData.domain_id = result.insertId;
+			todo.done();
+		}
 	});
 	
-	addMeta('meta_http_queries', { http_query: encodeURI(data.httpQuery) }, function (err, id) {
-		sqlData.http_query_id = id;
-		todo.done();
+	addMeta('meta_http_queries', { http_query: encodeURI(data.httpQuery) }, function (err, result) {
+		if (err) {
+			throw err;
+		} else {
+			sqlData.http_query_id = result.insertId;
+			todo.done();
+		}
 	});
 }
 
@@ -141,6 +161,15 @@ appExpress = Express();
 
 appExpress.use(Express.json());
 appExpress.post('/', function (req, res) {
+	function success() {
+		res.send({ success: true });
+	}
+	
+	function failed(err) {
+		Logger.error(err);
+		res.send(404, { success: false });
+	}
+	
 	Logger.verbose('Connection from ' + req.ip + '.');
 	res.set('connection', 'close');
 	
@@ -149,19 +178,27 @@ appExpress.post('/', function (req, res) {
 		
 		switch (req.body.type) {
 			case 'query':
-				logQuery(req.body.data);
-				res.send({ success: true });
+				try {
+					logQuery(req.body.data);
+					success();
+				} catch (err) {
+					failed(err);
+				}
 			break;
 			
 			case 'request':
-				logRequest(req.body.data);
-				res.send({ success: true });
+				try {
+					logRequest(req.body.data);
+					success();
+				} catch (err) {
+					failed(err);
+				}
 			break;
 			
 			default:
 				//throw Util.format('Invalid log type %s.', req.body.type);
 				Logger.error('Invalid log type %s.', req.body.type);
-				res.send(404, { success: false });
+				
 		}
 		
 	} else {
