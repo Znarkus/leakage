@@ -3,7 +3,7 @@ var Do = require('do'),
 	Express = require('express'),
 	Util = require('util'),
 	Commander = require('commander'),
-	logger = require('just-log'),
+	Logger = require('just-log'),
 	//metaCache = {},
 	mysqlConnection,
 	expressApp,
@@ -12,7 +12,7 @@ var Do = require('do'),
 
 
 function queryInsert(sql, data, callback) {
-	logger.debug('Sql "%s" with data %j', sql, data);
+	Logger.debug('Sql "%s" with data %j', sql, data);
 	
 	mysqlConnection.query(sql, data, function(err, result) {
 		if (err) {
@@ -115,8 +115,8 @@ if (!Commander.config) {
 	Commander.help();
 }
 
-logger.mode.debug = !!Commander.debug;
-logger.mode.verbose = !!Commander.verbose;
+Logger.mode.debug = !!Commander.debug;
+Logger.mode.verbose = !!Commander.verbose;
 config = require(process.cwd() + '/' + Commander.config);
 
 mysqlConnection = Mysql.createConnection({
@@ -128,10 +128,10 @@ mysqlConnection = Mysql.createConnection({
 
 mysqlConnection.connect(function (err) {
 	if (err) {
-		logger.error('Failed to connect to MySQL server.');
+		Logger.error('Failed to connect to MySQL server.');
 		process.exit(1);
 	} else {
-		logger.info('Connected to MySQL server on %s:%d.', mysqlConnection.config.host, mysqlConnection.config.port);
+		Logger.info('Connected to MySQL server on %s:%d.', mysqlConnection.config.host, mysqlConnection.config.port);
 	}
 });
 
@@ -141,11 +141,11 @@ appExpress = Express();
 
 appExpress.use(Express.json());
 appExpress.post('/', function (req, res) {
-	logger.verbose('Connection from ' + req.ip + '.');
+	Logger.verbose('Connection from ' + req.ip + '.');
 	res.set('connection', 'close');
 	
 	if (req.is('application/json')) {
-		logger.debug('Data received: %j', req.body);
+		Logger.debug('Data received: %j', req.body);
 		
 		switch (req.body.type) {
 			case 'query':
@@ -170,10 +170,10 @@ appExpress.post('/', function (req, res) {
 	
 	
 	/*res.send('hello world');
-	logger.verbose(req, res);*/
+	Logger.verbose(req, res);*/
 });
 
 var webServer = appExpress.listen(config.server.port, function () {
 	var address = webServer.address();
-	logger.info('Drain listening for HTTP on %s:%s.', address.address, address.port);
+	Logger.info('Drain listening for HTTP on %s:%s.', address.address, address.port);
 });
