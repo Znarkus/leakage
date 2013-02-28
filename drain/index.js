@@ -126,7 +126,12 @@ mysqlConnection = Mysql.createConnection({
 });
 
 mysqlConnection.connect(function (err) {
-	logger.info('Connected to MySQL server on %s:%d.', mysqlConnection.config.host, mysqlConnection.config.port);
+	if (err) {
+		logger.error('Failed to connect to MySQL server.');
+		process.exit(1);
+	} else {
+		logger.info('Connected to MySQL server on %s:%d.', mysqlConnection.config.host, mysqlConnection.config.port);
+	}
 });
 
 appExpress = Express();
