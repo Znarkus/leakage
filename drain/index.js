@@ -1,5 +1,5 @@
 var Do = require('do'),
-	Mysql = require('Mysql'),
+	Mysql = require('mysql'),
 	Express = require('express'),
 	Util = require('util'),
 	Commander = require('commander'),
