@@ -130,10 +130,12 @@ netServer = Net.createServer(function (socket) {
 	});
 	
 	socket.on('close', function () {
+		var data = buffer.join('');
 		//Logger.verbose(buffer);
-		queue.push(buffer.join(''));
+		queue.push(data);
 		stats.received++;
-		Logger.verbose('Connection closed. Data added to queue. Queue length: %s', queue.length);
+		Logger.verbose('Data added to queue: %s', data);
+		Logger.verbose('Connection closed. Queue length: %s', queue.length);
 		processQueue();
 		//netClient.write(buffer.join(''));
 	});

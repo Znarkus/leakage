@@ -16,7 +16,8 @@ function queryInsert(sql, data, callback) {
 	
 	mysqlConnection.query(sql, data, function(err, result) {
 		if (err) {
-			throw err;
+			//throw err;
+			Logger.error(err);
 		}
 		
 		// Callback( [error], result )
@@ -149,17 +150,19 @@ appExpress.post('/', function (req, res) {
 		switch (req.body.type) {
 			case 'query':
 				logQuery(req.body.data);
+				res.send({ success: true });
 			break;
 			
 			case 'request':
 				logRequest(req.body.data);
+				res.send({ success: true });
 			break;
 			
 			default:
-				throw Util.format('Invalid log type %s.', req.body.type);
+				//throw Util.format('Invalid log type %s.', req.body.type);
+				Logger.error('Invalid log type %s.', req.body.type);
+				res.send(404, { success: false });
 		}
-		
-		res.send({ success: true });
 		
 	} else {
 		res.send(404, { success: false });
