@@ -114,8 +114,8 @@ if (!Commander.config) {
 	Commander.help();
 }
 
-logger.mode.debug = Commander.debug;
-logger.mode.verbose = Commander.verbose;
+logger.mode.debug = !!Commander.debug;
+logger.mode.verbose = !!Commander.verbose;
 config = require(process.cwd() + '/' + Commander.config);
 
 mysqlConnection = Mysql.createConnection({
