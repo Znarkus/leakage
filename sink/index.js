@@ -55,13 +55,14 @@ function processQueue() {
 			stats.sentFailed++;
 			queue.push(data);
 			delayedProcessQueue();
-		} else if (queue.length > 0) {
+		} else {
 			Logger.verbose('Successfully sent data to drain.');
 			stats.sent++;
-			processQueue();
+			
+			if (queue.length > 0) {
+				processQueue();
+			}
 		}
-		
-		
 	});
 
 	req.on('error', function(e) {
