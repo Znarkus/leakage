@@ -39,7 +39,7 @@ function logQuery(data) {
 		sqlData.query_time = data.queryTime;
 		sqlData.log_date = new Date(data.logDate * 1000);
 		
-		mysqlConnection.query('INSERT INTO `queries` SET ?', sqlData, function (err, result) {
+		mysqlConnection.query('INSERT INTO `database_queries` SET ?', sqlData, function (err, result) {
 			if (err) {
 				Logger.error(err.message);
 			}
@@ -60,11 +60,11 @@ function logQuery(data) {
 		}
 	});
 	
-	addMeta('meta_http_queries', { http_query: encodeURI(data.httpQuery) }, function (err, result) {
+	addMeta('meta_http_query_strings', { http_query: encodeURI(data.httpQuery) }, function (err, result) {
 		if (err) {
 			throw err;
 		} else {
-			sqlData.http_query_id = result.insertId;
+			sqlData.http_query_string_id = result.insertId;
 			todo.done();
 		}
 	});
@@ -89,9 +89,10 @@ function logRequest(data) {
 		sqlData.account_id = data.accountId;
 		sqlData.person_id = data.personId;
 		sqlData.render_time = data.renderTime;
+		sqlData.database_query_count = data.databaseQueryCount;
 		sqlData.log_date = new Date(data.logDate * 1000);
 		
-		mysqlConnection.query('INSERT INTO `requests` SET ?', sqlData, function (err, result) {
+		mysqlConnection.query('INSERT INTO `http_requests` SET ?', sqlData, function (err, result) {
 			if (err) {
 				Logger.error(err.message);
 			}
@@ -113,11 +114,11 @@ function logRequest(data) {
 		}
 	});
 	
-	addMeta('meta_http_queries', { http_query: encodeURI(data.httpQuery) }, function (err, result) {
+	addMeta('meta_http_query_strings', { http_query: encodeURI(data.httpQuery) }, function (err, result) {
 		if (err) {
 			throw err;
 		} else {
-			sqlData.http_query_id = result.insertId;
+			sqlData.http_query_string_id = result.insertId;
 			todo.done();
 		}
 	});
